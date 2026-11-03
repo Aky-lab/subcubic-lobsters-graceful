@@ -1,13 +1,25 @@
-# Lean verification of the Section 3 recurrence
+# Checking the subcubic lobster certificate with Lean
 
-From this directory, with elan installed, run:
+With elan installed, run the following from this directory:
 
-    lean -DwarningAsError=true Coverage.lean
+    lake build
 
-Lean 4.33.0 with its standard library suffices. The last line reports that Lobster.coverage depends on propext and Quot.sound. No native decision procedure, external solver, or admitted lemma is used.
+The toolchain is pinned to Lean 4.33.0. There are no external Lean packages. On a fresh build the Certificate target parses the bundled JSON, checks all rows, discovers a set of windows, and checks every outgoing edge of that set. Lake caches successful builds. To force a fresh check use lake clean followed by lake build.
 
-A Parsed derivation builds a legal sequence of rules starting at start. Its word index is stored newest first, while the rule relation and the public coverage theorem take words in normal reading order. Each rule consumes one to six letters. A finished block cannot be extended, start cannot be a rule destination, and only finish or port zero is terminal.
+## What the theorem says
 
-Represents gives the meaning of all six history slots, including inactive slots near the beginning of a word. output_exact proves both soundness and completeness of one window transition against Parsed. advance_correct proves that updating the five letters and six history slots preserves their meanings. coverage then derives an accepting parse for every nonempty word from three hypotheses about a proposed set of windows: it contains the initial window, is closed under all four letters, and every outgoing letter yields a terminal destination.
+Lobster.certificate_universal states that every nonempty word in normal reading order has a parse ending at port zero or at the finished marker. Every block of this parse is witnessed by a row of this specific JSON file that satisfies validRow. Parsed stores the consumed prefix newest letter first, which explains word.reverse in the theorem. There are no hypotheses about the concrete table or its coverage left for the caller to prove.
 
-Scope: this file proves the implication for any rule relation. It does not import the concrete JSON table or discharge the closure and acceptance hypotheses for that table. The executable Python and JavaScript checks separately evaluate the concrete certificate. Its local label equations, the joining lemma in its entirety, and the graph-to-word reduction are outside this Lean theorem. This is a follow-up to Zenodo v1, separate from its deposited files.
+Coverage.lean proves that the five-letter suffix and six history slots describe all possible last blocks, that finished parses cannot continue, and that an accepting closed set suffices. This abstract proof uses ordinary kernel-checked terms.
+
+Certificate.lean embeds the actual JSON at build time. The computed fact rows_checked requires exactly 6,104 decoded rows, all passing the local equations. The checker rebuilds the block edges, checks the permutation of ordinary labels or the separate class permutations, checks all edge differences or sums, and verifies the specified entry and exit ranks.
+
+The second computed fact, concrete_check, requires exactly 278,215 distinct windows, inclusion of the start window, and acceptance and closure of all four outgoing transitions at every window (1,112,860 transitions). The 47 discovery rounds only propose a set. An inadequate set fails the separate closure check. The proofs ends_exact, child_view and root_view connect the executable states to the abstract proof. The lookup_from_rows and lookup_checked lemmas connect the lookup table to actual validated rows.
+
+## Trust and scope
+
+The two large closed calculations use native_decide, which relies on Lean's compiled evaluation. The file prints the axioms of rows_checked and certificate_universal so this trust choice is visible. The concrete result is not a kernel-only replay of those two calculations. There are no admitted proof placeholders. Neither the Python nor JavaScript verifier is invoked.
+
+The JSON file is byte-identical to subcubic_lobster_rules.json in the Zenodo v1 supplement, with SHA-256 f1e26f8a0944ee8de9fd40fdce9310c2360d3ff7d31236737d1a10dc4403e1d7. The pinned original is 250177 bytes. The publication predates this Lean development.
+
+This theorem certifies the actual rules and the language argument. A formal proof that the local conditions yield a graceful labeling under every join, together with the reduction from an arbitrary subcubic lobster as a graph to its word, would be needed for an end-to-end Lean proof of the graph theorem.

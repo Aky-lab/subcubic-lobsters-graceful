@@ -1,0 +1,9 @@
+name = "lobster_certificate"
+version = "0.1.0"
+defaultTargets = ["Certificate"]
+
+[[lean_lib]]
+name = "Coverage"
+
+[[lean_lib]]
+name = "Certificate"
