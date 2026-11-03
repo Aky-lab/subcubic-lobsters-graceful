@@ -1,25 +1,34 @@
-# Checking the subcubic lobster certificate with Lean
+# An end-to-end Lean proof for subcubic lobsters
 
-With elan installed, run the following from this directory:
+The main theorem is Lobster.every_subcubic_lobster_is_graceful in GraphTheorem.lean. It applies to a finite undirected simple graph G that is a tree, has maximum degree at most three, and has a simple path within graph distance two of every vertex. The path may consist of one vertex. The proof does not require a matching, an input word, a diameter supplied by the caller, or a bound on the tree order.
 
+For a tree with n vertices, IsGraceful asks for two bijections. The first sends the vertices to Fin n. The second sends the actual unordered edges of G to Fin (n-1). On each edge its second index plus one must equal the absolute difference of its two vertex labels. Adding one expresses the positive edge interval using Lean's zero-based Fin type.
+
+## Reproduce
+
+Install elan and Git. From this directory use the pinned Lean 4.33.0 toolchain. The first command fetches prebuilt mathlib dependencies for the graph modules used here. The second builds the local source, including the finite certificate checks.
+
+    lake exe cache get Mathlib.Combinatorics.SimpleGraph.Acyclic Mathlib.Combinatorics.SimpleGraph.Metric
     lake build
 
-The toolchain is pinned to Lean 4.33.0. There are no external Lean packages. On a fresh build the Certificate target parses the bundled JSON, checks all rows, discovers a set of windows, and checks every outgoing edge of that set. Lake caches successful builds. To force a fresh check use lake clean followed by lake build.
+Mathlib is pinned to v4.33.0 and the lockfile pins its dependencies. The first build requires internet access for these dependencies. To repeat all local checks after a successful build, run lake clean lobster_certificate followed by lake build. The final build target prints the axioms of the main theorem.
 
-## What the theorem says
+## Proof map
 
-Lobster.certificate_universal states that every nonempty word in normal reading order has a parse ending at port zero or at the finished marker. Every block of this parse is witnessed by a row of this specific JSON file that satisfies validRow. Parsed stores the consumed prefix newest letter first, which explains word.reverse in the theorem. There are no hypotheses about the concrete table or its coverage left for the caller to prove.
+| File | Result |
+| --- | --- |
+| GraphTheorem.lean | Formal statement in terms of mathlib SimpleGraph, graph distance, and bijections. Uses the tree edge-count theorem to pass from witnesses for every difference to a bijection on all edges. |
+| PathReduction.lean, Fibres.lean, NamedSpine.lean | Choose a maximal witnessing path. Its endpoints admit no off-path neighbors. Each interior vertex has at most one available neighbor, and each off-path head has room for at most two children. A choice of parents partitions the original vertices into spine cells. Every edge of the resulting spanning construction is an original graph edge. |
+| Transport.lean, Strips.lean | Give the cells explicit vertices and edges. Align a certificate-labeled sequence of cells with the named cells of the graph, then use uniqueness of vertex names to transfer all labels. |
+| Joining.lean | Prove the interval joining lemma and the complement operation uniformly in the order of the old tree. |
+| Assembly.lean | Decode the actual JSON rows as cells. Check the geometric conditions on those decoded cells and prove by induction on a parse that it yields a globally graceful segment. Handle the explicit cap and the zero-port terminal cases. |
+| Certificate.lean | Decode the exact table. Validate the 6,104 rows and check closure and acceptance of 278,215 distinct windows under all four letters. Connect each transition to a validated row in the table. |
+| Coverage.lean | Prove that the finite window represents all allowable last blocks and that acceptance of all outgoing transitions in a closed set implies a terminal parse for every nonempty word. |
 
-Coverage.lean proves that the five-letter suffix and six history slots describe all possible last blocks, that finished parses cannot continue, and that an accepting closed set suffices. This abstract proof uses ordinary kernel-checked terms.
+The graph proof uses a maximal witnessing path; it does not need to verify the Python constructor's choice of a diameter. On the graph side it suffices to exhibit every difference on an original edge. A tree has exactly n-1 edges, which makes these witnesses exhaustive and unique. The formal theorem establishes existence of a labeling. The supplemental Python implementation is separately tested.
 
-Certificate.lean embeds the actual JSON at build time. The computed fact rows_checked requires exactly 6,104 decoded rows, all passing the local equations. The checker rebuilds the block edges, checks the permutation of ordinary labels or the separate class permutations, checks all edge differences or sums, and verifies the specified entry and exit ranks.
+## Computational trust and provenance
 
-The second computed fact, concrete_check, requires exactly 278,215 distinct windows, inclusion of the start window, and acceptance and closure of all four outgoing transitions at every window (1,112,860 transitions). The 47 discovery rounds only propose a set. An inadequate set fails the separate closure check. The proofs ends_exact, child_view and root_view connect the executable states to the abstract proof. The lookup_from_rows and lookup_checked lemmas connect the lookup table to actual validated rows.
+Three finite calculations use Lean's native_decide. They verify the row equations, language closure and acceptance, and the interpretation of the row labels on the decoded cells. Each native evaluation introduces a compiler-trusted axiom, listed by the main theorem's axiom report. The remaining proof is checked by the Lean kernel with the standard propext, Classical.choice, and Quot.sound axioms. There are no admitted proof placeholders. Neither Python nor JavaScript is invoked by the Lean build.
 
-## Trust and scope
-
-The two large closed calculations use native_decide, which relies on Lean's compiled evaluation. The file prints the axioms of rows_checked and certificate_universal so this trust choice is visible. The concrete result is not a kernel-only replay of those two calculations. There are no admitted proof placeholders. Neither the Python nor JavaScript verifier is invoked.
-
-The JSON file is byte-identical to subcubic_lobster_rules.json in the Zenodo v1 supplement, with SHA-256 f1e26f8a0944ee8de9fd40fdce9310c2360d3ff7d31236737d1a10dc4403e1d7. The pinned original is 250177 bytes. The publication predates this Lean development.
-
-This theorem certifies the actual rules and the language argument. A formal proof that the local conditions yield a graceful labeling under every join, together with the reduction from an arbitrary subcubic lobster as a graph to its word, would be needed for an end-to-end Lean proof of the graph theorem.
+The 250177-byte JSON input has SHA-256 f1e26f8a0944ee8de9fd40fdce9310c2360d3ff7d31236737d1a10dc4403e1d7. It is byte-identical to the rule table in the Zenodo v1 supplement. This formalization was developed after the v1 deposit. It is separate from independent human peer review and from the question of priority.

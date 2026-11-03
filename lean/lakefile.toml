@@ -1,9 +1,12 @@
 name = "lobster_certificate"
-version = "0.1.0"
-defaultTargets = ["Certificate"]
+version = "0.2.0"
+defaultTargets = ["GraphTheorem"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
 
 [[lean_lib]]
-name = "Coverage"
-
-[[lean_lib]]
-name = "Certificate"
+name = "GraphTheorem"
+roots = ["Coverage", "Certificate", "Joining", "Strips", "Assembly", "Transport", "Fibres", "PathReduction", "NamedSpine", "GraphTheorem"]
